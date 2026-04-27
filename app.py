@@ -1,42 +1,41 @@
 import os
 from flask import Flask, request
 import requests
-import urllib.parse  # Добавили для обработки текста
 
 app = Flask(__name__)
 
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+# Прямая проверка ключа
+API_KEY = os.environ.get("GROQ_API_KEY")
 
-@app.route('/chat', methods=['GET'])
+@app.route('/chat')
 def chat():
-    # Получаем сырой текст и декодируем его правильно
-    user_query = request.args.get('text', '')
+    user_text = request.args.get('text', 'Привет')
     
-    if not user_query:
-        return "Я тебя слушаю. Задай свой вопрос."
+    # Если ключ забыли добавить в Environment Variables
+    if not API_KEY:
+        return "Ошибка: API ключ не настроен в настройках Render!"
 
-    headers = {
-        "Authorization": f"Bearer {GROQ_API_KEY}",
-        "Content-Type": "application/json"
-    }
-    
-    data = {
+    payload = {
         "model": "llama3-8b-8192",
-        "messages": [
-            {"role": "system", "content": "Ты крутой ИИ помощник в приложении Pocket Code. Отвечай кратко, понятно и по делу."},
-            {"role": "user", "content": user_query}
-        ]
+        "messages": [{"role": "user", "content": user_text}]
+    }
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json"
     }
 
     try:
         response = requests.post("https://groq.com", 
-                                 json=data, headers=headers)
-        result = response.json()
-        return result['choices']['message']['content']
-    except Exception:
-        return "Упс, ошибка связи с мозгом! Проверь интернет."
+                                 json=payload, headers=headers)
+        # Если Groq ответил ошибкой, мы увидим её вместо 500
+        if response.status_code != 200:
+            return f"Groq Error: {response.text}"
+            
+        data = response.json()
+        return data['choices'][0]['message']['content']
+    except Exception as e:
+        return f"Ошибка сервера: {str(e)}"
 
 if __name__ == '__main__':
-    # Порт для Render
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=10000)
+
