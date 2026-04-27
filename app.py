@@ -10,6 +10,7 @@ client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 @app.route('/chat')
 def chat():
     user_query = request.args.get('text', '')
+    user_query = user_query.replace(" ", "%20")
     
     if not user_query:
         return "Слушаю..."
