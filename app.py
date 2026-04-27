@@ -5,35 +5,40 @@ import requests
 app = Flask(__name__)
 API_KEY = os.environ.get("GROQ_API_KEY")
 
-@app.route('/chat')
+@app.route('/chat', methods=['GET'])
 def chat():
-    # Проверка: видит ли сервер ключ вообще?
-    if not API_KEY:
-        return "ОШИБКА: Сервер не видит переменную GROQ_API_KEY в настройках Render!"
+    user_text = request.args.get('text', 'Привет')
     
-    user_text = request.args.get('text', 'test')
+    if not API_KEY:
+        return "Ошибка: Ключ GROQ_API_KEY не найден в Environment Variables!"
+
+    # Ссылка для Groq
+    url = "https://groq.com"
     
     headers = {
         "Authorization": f"Bearer {API_KEY}",
         "Content-Type": "application/json"
     }
     
-    payload = {
+    data = {
         "model": "llama3-8b-8192",
-        "messages": [{"role": "user", "content": user_text}]
+        "messages": [
+            {"role": "system", "content": "Ты краткий ИИ-помощник."},
+            {"role": "user", "content": user_text}
+        ]
     }
 
     try:
-        r = requests.post("https://groq.com", 
-                          json=payload, headers=headers)
+        # Явно указываем POST запрос к Groq
+        response = requests.post(url, headers=headers, json=data)
         
-        # Если Groq ответил не 200, выводим причину
-        if r.status_code != 200:
-            return f"Groq Error {r.status_code}: {r.text}"
-            
-        return r.json()['choices']['message']['content']
+        if response.status_code == 200:
+            return response.json()['choices']['message']['content']
+        else:
+            return f"Groq Error {response.status_code}: {response.text}"
     except Exception as e:
-        return f"Ошибка кода: {str(e)}"
+        return f"Ошибка сервера: {str(e)}"
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=10000)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port)
