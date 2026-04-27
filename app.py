@@ -21,7 +21,7 @@ def chat():
                 {"role": "system", "content": "Ты краткий ассистент."},
                 {"role": "user", "content": user_query},
             ],
-            model="llama3-8b-8192",
+            model="llama-3.3-70b-versatile", # Эта модель сейчас основная и очень мощная
         )
         return chat_completion.choices[0].message.content
     except Exception as e:
